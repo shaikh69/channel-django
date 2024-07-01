@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 80%;
+            max-width: 800px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+        }
+        .chat-log {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .chat-log p {
+            margin: 0;
+            padding: 5px 0;
+        }
+        .chat-log p span {
+            font-weight: bold;
+        }
+        .chat-input {
+            display: flex;
+            flex-direction: column;
+            gap: 10px
+        }
+        .chat-input input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px 0 0 5px;
+        }
+        .chat-input input[type="button"] {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+        }
+        .chat-input input[type="button"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const roomName = "{{ room_name }}";
+            const username = new URLSearchParams(window.location.search).get('username');
+            const chatSocket = new WebSocket(
+                'ws://' + window.location.host + '/ws/chat/' + roomName + '/'
+            );
+
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                const message = data.message;
+                const user = data.username;
+                const chatLog = document.querySelector('.chat-log');
+                const newMessage = document.createElement('p');
+                newMessage.innerHTML = `<span>${user}</span>: ${message}`;
+                chatLog.appendChild(newMessage);
+                chatLog.scrollTop = chatLog.scrollHeight;
+            };
+
+            chatSocket.onclose = function(e) {
+                console.error('Chat socket closed unexpectedly');
+            };
+
+            const chatMessageInput = document.querySelector('#chat-message-input');
+            const chatMessageSubmit = document.querySelector('#chat-message-submit');
+
+            chatMessageInput.focus();
+            chatMessageInput.onkeyup = function(e) {
+                if (e.keyCode === 13) {  // Enter key
+                    chatMessageSubmit.click();
+                }
+            };
+
+            chatMessageSubmit.onclick = function(e) {
+                const message = chatMessageInput.value;
+                chatSocket.send(JSON.stringify({
+                    'message': message,
+                    'username': username
+                }));
+                chatMessageInput.value = '';
+            };
+        });
+    </script>
+</head>
+<body>
+    <div class="chat-container">
+        <h2>Room: {{ room_name }}</h2>
+        <div class="chat-log" id="chat-log"></div>
+        <div class="chat-input">
+            <input id="chat-message-input" type="text" size="100" placeholder="Type your message here...">
+            <input id="chat-message-submit" type="button" value="Send">
+        </div>
+    </div>
+</body>
+</html>
